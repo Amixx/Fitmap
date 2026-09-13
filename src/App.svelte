@@ -18,6 +18,7 @@
   };
   type View = 'wardrobe' | 'outfits' | 'builder';
   type Outfit = { id: string; name: string; items: string[]; occasions: string[]; seasons: string[]; rating: number; notes?: string; variants?: string[][]; favorite?: boolean };
+  type Compatibility = { items: string[]; score: number; contexts?: string[]; note?: string };
   const categories = { all: 'Viss', tops: 'Virsdaļas', bottoms: 'Apakšdaļas', outerwear: 'Virsslāņi', shoes: 'Apavi', bags: 'Somas' };
   const defaultItems = wardrobe.items as Item[];
 
@@ -28,6 +29,15 @@
       return saved ? (JSON.parse(saved) as Item[]) : defaultItems;
     } catch {
       return defaultItems;
+    }
+  }
+  function loadCompatibility(): Compatibility[] {
+    if (typeof localStorage === 'undefined') return wardrobe.compatibility as Compatibility[];
+    try {
+      const saved = localStorage.getItem('fitmap-compatibility');
+      return saved ? (JSON.parse(saved) as Compatibility[]) : wardrobe.compatibility as Compatibility[];
+    } catch {
+      return wardrobe.compatibility as Compatibility[];
     }
   }
 
@@ -45,10 +55,14 @@
   let builderItems: string[] = [];
   let showEditor = false;
   let editorMode: 'list' | 'form' = 'list';
-  let editingItem: Item | null = null;
+  // The editor uses the truthiness of this value as its open/closed state.
+  // Keep the runtime empty state while allowing the template's guarded editor
+  // section to access the selected item without repeated nullable assertions.
+  let editingItem: Item = null as unknown as Item;
   let draft: Item = emptyItem();
   let toast = '';
   let items = loadItems();
+  let compatibility = loadCompatibility();
   let favorites = new Set(items.filter((item) => item.favorite).map((item) => item.id));
   let outfits: Outfit[] = loadOutfits();
   let showOutfitEditor = false;
@@ -67,6 +81,7 @@
   }
 
   $: if (typeof localStorage !== 'undefined') localStorage.setItem('fitmap-items', JSON.stringify(items));
+  $: if (typeof localStorage !== 'undefined') localStorage.setItem('fitmap-compatibility', JSON.stringify(compatibility));
   $: if (typeof localStorage !== 'undefined') localStorage.setItem('fitmap-outfits', JSON.stringify(outfits));
 
   $: visibleItems = items.filter((item) => {
@@ -86,10 +101,10 @@
 
   function builderScore(id: string) {
     if (!builderItems.length) return 0;
-    const scores = builderItems.map((selectedId) => wardrobe.compatibility.find((pair) => pair.items.includes(selectedId) && pair.items.includes(id))?.score ?? 0);
+    const scores = builderItems.map((selectedId) => compatibility.find((pair) => pair.items.includes(selectedId) && pair.items.includes(id))?.score ?? 0);
     return Math.min(...scores);
   }
-  function builderPairScore(first: string, second: string) { return wardrobe.compatibility.find((pair) => pair.items.includes(first) && pair.items.includes(second))?.score ?? 0; }
+  function builderPairScore(first: string, second: string) { return compatibility.find((pair) => pair.items.includes(first) && pair.items.includes(second))?.score ?? 0; }
   function selectedCompatibilityScore() {
     const scores: number[] = [];
     for (let first = 0; first < builderItems.length; first += 1) {
@@ -99,7 +114,7 @@
   }
   function selectedMatchesFor(id: string | undefined) {
     if (!id) return [];
-    return wardrobe.compatibility.filter((pair) => pair.items.includes(id)).map((pair) => ({ item: items.find((item) => item.id === pair.items.find((pairId) => pairId !== id)), score: pair.score, note: pair.note }));
+    return compatibility.filter((pair) => pair.items.includes(id) && pair.score > 0).map((pair) => ({ item: items.find((item) => item.id === pair.items.find((pairId) => pairId !== id)), score: pair.score, note: pair.note }));
   }
   function selectItem(id: string) {
     const item = items.find((candidate) => candidate.id === id);
@@ -129,8 +144,24 @@
     draft = { ...item, colors: [...item.colors], seasons: [...item.seasons], occasions: [...item.occasions] };
     editorMode = 'form';
   }
+  function getCompatibility(first: string, second: string) {
+    return compatibility.find((pair) => pair.items.includes(first) && pair.items.includes(second));
+  }
+  function setCompatibility(first: string, second: string, score: number) {
+    const existing = getCompatibility(first, second);
+    if (existing) compatibility = compatibility.map((pair) => pair === existing ? { ...pair, score } : pair);
+    else compatibility = [...compatibility, { items: [first, second], score }];
+  }
+  function setCompatibilityNote(first: string, second: string, note: string) {
+    const existing = getCompatibility(first, second);
+    if (existing) compatibility = compatibility.map((pair) => pair === existing ? { ...pair, note } : pair);
+    else compatibility = [...compatibility, { items: [first, second], score: 2, note }];
+  }
+  function clearCompatibility(first: string, second: string) {
+    compatibility = compatibility.filter((pair) => !(pair.items.includes(first) && pair.items.includes(second)));
+  }
   function newItem() {
-    editingItem = null;
+    editingItem = null as unknown as Item;
     draft = emptyItem();
     editorMode = 'form';
   }
@@ -168,6 +199,7 @@
         if (!Array.isArray(parsed.items)) throw new Error('invalid');
         items = parsed.items as Item[];
         if (Array.isArray(parsed.outfits)) outfits = parsed.outfits as Outfit[];
+        if (Array.isArray(parsed.compatibility)) compatibility = parsed.compatibility as Compatibility[];
         favorites = new Set(items.filter((item) => item.favorite).map((item) => item.id));
         editorMode = 'list';
         toast = 'Garderobe importēta';
@@ -198,7 +230,7 @@
   function removeOutfit(outfit: Outfit) { if (confirm(`Dzēst “${outfit.name}”?`)) outfits = outfits.filter((candidate) => candidate.id !== outfit.id); }
   function addVariant() { if (outfitBuilderItems.length >= 2) outfitDraft = { ...outfitDraft, variants: [...(outfitDraft.variants ?? []), [...outfitBuilderItems]] }; }
   function exportData() {
-    const blob = new Blob([JSON.stringify({ ...wardrobe, items: items.map((item) => ({ ...item, favorite: favorites.has(item.id) })), outfits }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ ...wardrobe, items: items.map((item) => ({ ...item, favorite: favorites.has(item.id) })), compatibility, outfits }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'mana-garderobe.json'; link.click(); URL.revokeObjectURL(url);
     toast = 'Garderobe lejupielādēta'; setTimeout(() => (toast = ''), 1800);
   }
@@ -240,6 +272,6 @@
 
   {#if selected}<div class="overlay" role="presentation" on:click={() => (selected = null)}><aside class="detail-panel" on:click|stopPropagation><button class="close" aria-label="Aizvērt" on:click={() => (selected = null)}>×</button><img class="detail-image" src={selected.image} alt={selected.name} /><div class="detail-body"><div class="detail-title"><div><span class="eyebrow">{categories[selected.category as keyof typeof categories]}</span><h2>{selected.name}</h2></div><button class="detail-heart" class:chosen={favorites.has(selected.id)} on:click={toggleSelectedFavorite}>{favorites.has(selected.id) ? '♥' : '♡'}</button></div><p class="detail-notes">{selected.notes ?? 'Pievieno piezīmes rediģēšanas režīmā.'}</p><div class="tag-list">{#each [...selected.colors, selected.material, ...selected.occasions] as tag}<span>{tag}</span>{/each}</div><button class="primary-button" on:click={() => selected && addToBuilder(selected)}>Pievienot tērpa veidotājam <span>↗</span></button><h3>Labi sader ar</h3><div class="match-list">{#each selectedMatches.slice(0, 3) as match}{#if match.item}<button on:click={() => selectItem(match.item?.id ?? '')}><img src={match.item?.image} alt="" /><span>{match.item?.name}<small>{match.note ?? 'Viegli kombinēt'}</small></span><b>{'★'.repeat(match.score)}</b></button>{/if}{/each}</div></div></aside></div>{/if}
   {#if showOutfitEditor}<div class="overlay" role="presentation" on:click={() => (showOutfitEditor = false)}><div class="editor-modal outfit-editor" on:click|stopPropagation><button class="close" aria-label="Aizvērt" on:click={() => (showOutfitEditor = false)}>×</button><div class="editor-heading"><div><span class="eyebrow">Tērpu kolekcija</span><h2>{editingOutfit ? 'Rediģēt tērpu' : 'Jauns tērps'}</h2></div></div><div class="editor-form"><label>Nosaukums<input bind:value={outfitDraft.name} placeholder="Piemēram, piektdienas vakars" /></label><label>Gadījums<select bind:value={outfitDraft.occasions[0]}>{#each ['Ikdiena', 'Darbs', 'Vakariņas', 'Ceļojums', 'Svinīgs'] as occasion}<option value={occasion}>{occasion}</option>{/each}</select></label><label>Sezona<select bind:value={outfitDraft.seasons[0]}>{#each ['Visu gadu', 'Pavasaris', 'Vasara', 'Rudens', 'Ziema'] as season}<option value={season}>{season}</option>{/each}</select></label><label>Novērtējums<select bind:value={outfitDraft.rating}><option value={3}>Lielisks</option><option value={2}>Labs</option><option value={1}>Ārkārtas variants</option></select></label><label class="wide-field">Piezīmes<textarea bind:value={outfitDraft.notes} rows="3" placeholder="Kas padara šo tērpu īpašu?"></textarea></label></div><div class="editor-section-heading"><div><h3 class="editor-section-title">Izvēlies gabalus</h3><p class="editor-hint">Pieskaries attēlam, lai pievienotu vai noņemtu apģērbu.</p></div><strong class="selection-count">{outfitBuilderItems.length} izvēlēti</strong></div><div class="outfit-picker">{#each items as item}<button class:chosen={outfitBuilderItems.includes(item.id)} aria-pressed={outfitBuilderItems.includes(item.id)} on:click={() => outfitBuilderItems = outfitBuilderItems.includes(item.id) ? outfitBuilderItems.filter((id) => id !== item.id) : [...outfitBuilderItems, item.id]}><span class="picker-image"><img src={item.image} alt="" />{#if outfitBuilderItems.includes(item.id)}<span class="selected-badge">✓ Izvēlēts</span>{/if}</span><span>{item.name}</span></button>{/each}</div><div class="variant-bar"><div><strong>Varianti</strong><p>Variants ir cita šī tērpa versija, piemēram, ar citu jaku vai apaviem.</p></div><button class="secondary-button" disabled={outfitBuilderItems.length < 2} on:click={addVariant}>Saglabāt pašreizējo kā variantu</button><span>{outfitDraft.variants?.length ?? 0} saglabāti</span></div><div class="form-actions"><button class="secondary-button" on:click={() => (showOutfitEditor = false)}>Atcelt</button><button class="primary-button compact-button" on:click={saveOutfit}>Saglabāt tērpu</button></div></div></div>{/if}
-  {#if showEditor}<div class="overlay" role="presentation" on:click={() => (showEditor = false)}><div class="editor-modal wardrobe-editor" on:click|stopPropagation><button class="close" aria-label="Aizvērt" on:click={() => (showEditor = false)}>×</button>{#if editorMode === 'list'}<div class="editor-heading"><div><span class="eyebrow">Tava kolekcija</span><h2>Rediģēt garderobi</h2></div><button class="primary-button compact-button" on:click={newItem}>+ Pievienot apģērbu</button></div><p>Pievieno jaunus apģērbus, maini informāciju vai nomaini foto.</p><div class="editor-actions"><label class="secondary-button file-button">Importēt garderobi<input type="file" accept="application/json" on:change={importData} /></label><button class="secondary-button" on:click={exportData}>Eksportēt garderobi ↓</button></div><div class="editor-list">{#each items as item}<div class="editor-row">{#if item.image}<img src={item.image} alt="" />{:else}<div class="editor-placeholder">?</div>{/if}<div><strong>{item.name}</strong><span>{categories[item.category as keyof typeof categories]} · {item.material}</span></div><button aria-label="Rediģēt" on:click={() => editItem(item)}>Rediģēt</button><button class="delete-button" aria-label="Dzēst" on:click={() => removeItem(item)}>×</button></div>{/each}</div>{:else}<div class="editor-heading"><div><span class="eyebrow">{editingItem ? 'Mainīt apģērbu' : 'Jauns apģērbs'}</span><h2>{editingItem ? 'Rediģēt apģērbu' : 'Pievienot apģērbu'}</h2></div></div><div class="editor-form"><label>Nosaukums<input bind:value={draft.name} placeholder="Piemēram, balta lina blūze" /></label><label>Kategorija<select bind:value={draft.category}>{#each Object.entries(categories).filter(([key]) => key !== 'all') as [key, label]}<option value={key}>{label}</option>{/each}</select></label><label>Materiāls<input bind:value={draft.material} placeholder="Piemēram, lins" /></label><label>Krāsa<input value={draft.colors.join(', ')} on:input={(event) => (draft = { ...draft, colors: (event.currentTarget as HTMLInputElement).value.split(',').map((value) => value.trim()).filter(Boolean) })} placeholder="Bēšs, balts" /></label><label>Piezīmes<textarea bind:value={draft.notes} rows="3" placeholder="Kas jāatceras par šo apģērbu?"></textarea></label><label class="photo-upload">{#if draft.image}<img src={draft.image} alt="Izvēlētais foto" />{:else}<span>Izvēlies foto no telefona vai datora</span>{/if}<strong>{draft.image ? 'Nomainīt foto' : 'Pievienot foto'}</strong><input type="file" accept="image/*" on:change={handlePhoto} /></label></div><div class="form-actions"><button class="secondary-button" on:click={() => (editorMode = 'list')}>Atcelt</button><button class="primary-button compact-button" on:click={saveItem}>Saglabāt</button></div>{/if}</div></div>{/if}
+  {#if showEditor}<div class="overlay" role="presentation" on:click={() => (showEditor = false)}><div class="editor-modal wardrobe-editor" on:click|stopPropagation><button class="close" aria-label="Aizvērt" on:click={() => (showEditor = false)}>×</button>{#if editorMode === 'list'}<div class="editor-heading"><div><span class="eyebrow">Tava kolekcija</span><h2>Rediģēt garderobi</h2></div><button class="primary-button compact-button" on:click={newItem}>+ Pievienot apģērbu</button></div><p>Pievieno jaunus apģērbus, maini informāciju vai nomaini foto.</p><div class="editor-actions"><label class="secondary-button file-button">Importēt garderobi<input type="file" accept="application/json" on:change={importData} /></label><button class="secondary-button" on:click={exportData}>Eksportēt garderobi ↓</button></div><div class="editor-list">{#each items as item}<div class="editor-row">{#if item.image}<img src={item.image} alt="" />{:else}<div class="editor-placeholder">?</div>{/if}<div><strong>{item.name}</strong><span>{categories[item.category as keyof typeof categories]} · {item.material}</span></div><button aria-label="Rediģēt" on:click={() => editItem(item)}>Rediģēt</button><button class="delete-button" aria-label="Dzēst" on:click={() => removeItem(item)}>×</button></div>{/each}</div>{:else}<div class="editor-heading"><div><span class="eyebrow">{editingItem ? 'Mainīt apģērbu' : 'Jauns apģērbs'}</span><h2>{editingItem ? 'Rediģēt apģērbu' : 'Pievienot apģērbu'}</h2></div></div><div class="editor-form"><label>Nosaukums<input bind:value={draft.name} placeholder="Piemēram, balta lina blūze" /></label><label>Kategorija<select bind:value={draft.category}>{#each Object.entries(categories).filter(([key]) => key !== 'all') as [key, label]}<option value={key}>{label}</option>{/each}</select></label><label>Materiāls<input bind:value={draft.material} placeholder="Piemēram, lins" /></label><label>Krāsa<input value={draft.colors.join(', ')} on:input={(event) => (draft = { ...draft, colors: (event.currentTarget as HTMLInputElement).value.split(',').map((value) => value.trim()).filter(Boolean) })} placeholder="Bēšs, balts" /></label><label>Piezīmes<textarea bind:value={draft.notes} rows="3" placeholder="Kas jāatceras par šo apģērbu?"></textarea></label><label class="photo-upload">{#if draft.image}<img src={draft.image} alt="Izvēlētais foto" />{:else}<span>Izvēlies foto no telefona vai datora</span>{/if}<strong>{draft.image ? 'Nomainīt foto' : 'Pievienot foto'}</strong><input type="file" accept="image/*" on:change={handlePhoto} /></label></div>{#if editingItem}<section class="compatibility-editor"><div class="compatibility-heading"><div><h3>Saderība</h3><p>Šeit ieraksti, ko ChatGPT iesaka kopā ar šo apģērbu.</p></div><span>{compatibility.filter((pair) => pair.items.includes(editingItem?.id ?? '')).length} ieraksti</span></div>{#each items.filter((item) => item.id !== editingItem?.id) as relatedItem}{@const relation = getCompatibility(editingItem.id, relatedItem.id)}<div class="compatibility-row"><div class="compatibility-item"><img src={relatedItem.image} alt="" /><strong>{relatedItem.name}</strong></div><div class="compatibility-options"><button class:active={relation?.score === 3} on:click={() => setCompatibility(editingItem.id, relatedItem.id, 3)}>Labi</button><button class:active={relation?.score === 2} on:click={() => setCompatibility(editingItem.id, relatedItem.id, 2)}>Var mēģināt</button><button class:active={relation?.score === 0} on:click={() => setCompatibility(editingItem.id, relatedItem.id, 0)}>Neiesaku</button><button class="clear-compatibility" aria-label="Noņemt saderības ierakstu" on:click={() => clearCompatibility(editingItem.id, relatedItem.id)}>×</button></div><input class="compatibility-note" value={relation?.note ?? ''} on:input={(event) => setCompatibilityNote(editingItem.id, relatedItem.id, (event.currentTarget as HTMLInputElement).value)} placeholder="Piezīme, piemēram, “labs krāsu līdzsvars”" /></div>{/each}</section>{/if}<div class="form-actions"><button class="secondary-button" on:click={() => (editorMode = 'list')}>Atcelt</button><button class="primary-button compact-button" on:click={saveItem}>Saglabāt</button></div>{/if}</div></div>{/if}
   {#if toast}<div class="toast">{toast}</div>{/if}
 </div>
