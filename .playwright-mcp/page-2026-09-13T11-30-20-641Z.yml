@@ -1,0 +1,120 @@
+- generic [ref=f2e3]:
+  - complementary [ref=f2e4]:
+    - generic [ref=f2e5]:
+      - generic [ref=f2e6]: fm
+      - generic [ref=f2e7]: fitmap
+    - paragraph [ref=f2e8]: Tava garderobe,sakārtota dzīvei.
+    - navigation "Galvenā navigācija" [ref=f2e9]:
+      - button "01 Garderobe" [ref=f2e10] [cursor=pointer]:
+        - generic [ref=f2e11]: "01"
+        - text: Garderobe
+      - button "02 Mani tērpi" [ref=f2e12] [cursor=pointer]:
+        - generic [ref=f2e13]: "02"
+        - text: Mani tērpi
+      - button "03 Izveidot tērpu" [ref=f2e14] [cursor=pointer]:
+        - generic [ref=f2e15]: "03"
+        - text: Izveidot tērpu
+    - generic [ref=f2e16]:
+      - paragraph [ref=f2e17]: Viss glabājas šajā ierīcē.
+      - button "Rediģēt garderobi ↗" [ref=f2e18] [cursor=pointer]
+  - main [ref=f2e19]:
+    - generic [ref=f2e20]:
+      - generic [ref=f2e21]:
+        - text: Tava kolekcija
+        - heading "Garderobe" [level=1] [ref=f2e22]
+      - button "Meklēt" [ref=f2e23] [cursor=pointer]: ⌕
+    - generic [ref=f2e24]:
+      - paragraph [ref=f2e25]:
+        - text: Apģērbi, kas tev jau ir.
+        - emphasis [ref=f2e26]: Idejas, ko ar tiem iesākt.
+      - generic [ref=f2e27]:
+        - strong [ref=f2e28]: "9"
+        - generic [ref=f2e29]: gabali garderobē
+      - generic [ref=f2e30]:
+        - strong [ref=f2e31]: "2"
+        - generic [ref=f2e32]: saglabāti tērpi
+    - generic [ref=f2e33]:
+      - generic [ref=f2e34]:
+        - generic [ref=f2e35]: ⌕
+        - textbox "Meklēt pēc nosaukuma vai krāsas" [ref=f2e36]
+      - button "♡ Izlase" [ref=f2e37] [cursor=pointer]
+    - generic [ref=f2e38]:
+      - button "Viss" [ref=f2e39] [cursor=pointer]
+      - button "Virsdaļas" [ref=f2e40] [cursor=pointer]
+      - button "Apakšdaļas" [ref=f2e41] [cursor=pointer]
+      - button "Virsslāņi" [ref=f2e42] [cursor=pointer]
+      - button "Apavi" [ref=f2e43] [cursor=pointer]
+      - button "Somas" [ref=f2e44] [cursor=pointer]
+    - region "Garderobes apģērbi" [ref=f2e45]:
+      - button "Tumši zila zīda blūze Pievienot izlasei Virsdaļas Tumši zila zīda blūze Tumši zila · Zīds" [ref=f2e46]:
+        - generic [ref=f2e47]:
+          - img "Tumši zila zīda blūze" [ref=f2e48]
+          - button "Pievienot izlasei" [ref=f2e49] [cursor=pointer]: ♥
+          - generic [ref=f2e50]: Virsdaļas
+        - generic [ref=f2e51]:
+          - heading "Tumši zila zīda blūze" [level=2] [ref=f2e52]
+          - paragraph [ref=f2e53]: Tumši zila · Zīds
+      - button "Krēmkrāsas adīts džemperis Pievienot izlasei Virsdaļas Krēmkrāsas adīts džemperis Krēmkrāsa · Vilna" [ref=f2e54]:
+        - generic [ref=f2e55]:
+          - img "Krēmkrāsas adīts džemperis" [ref=f2e56]
+          - button "Pievienot izlasei" [ref=f2e57] [cursor=pointer]: ♥
+          - generic [ref=f2e58]: Virsdaļas
+        - generic [ref=f2e59]:
+          - heading "Krēmkrāsas adīts džemperis" [level=2] [ref=f2e60]
+          - paragraph [ref=f2e61]: Krēmkrāsa · Vilna
+      - button "Bēšas platas bikses Pievienot izlasei Apakšdaļas Bēšas platas bikses Bēšs · Lina maisījums" [ref=f2e62]:
+        - generic [ref=f2e63]:
+          - img "Bēšas platas bikses" [ref=f2e64]
+          - button "Pievienot izlasei" [ref=f2e65] [cursor=pointer]: ♡
+          - generic [ref=f2e66]: Apakšdaļas
+        - generic [ref=f2e67]:
+          - heading "Bēšas platas bikses" [level=2] [ref=f2e68]
+          - paragraph [ref=f2e69]: Bēšs · Lina maisījums
+      - button "Melnas klasiskas bikses Pievienot izlasei Apakšdaļas Melnas klasiskas bikses Melns · Vilnas maisījums" [ref=f2e70]:
+        - generic [ref=f2e71]:
+          - img "Melnas klasiskas bikses" [ref=f2e72]
+          - button "Pievienot izlasei" [ref=f2e73] [cursor=pointer]: ♥
+          - generic [ref=f2e74]: Apakšdaļas
+        - generic [ref=f2e75]:
+          - heading "Melnas klasiskas bikses" [level=2] [ref=f2e76]
+          - paragraph [ref=f2e77]: Melns · Vilnas maisījums
+      - button "Džinsa midi svārki Pievienot izlasei Apakšdaļas Džinsa midi svārki Zils · Džinss" [ref=f2e78]:
+        - generic [ref=f2e79]:
+          - img "Džinsa midi svārki" [ref=f2e80]
+          - button "Pievienot izlasei" [ref=f2e81] [cursor=pointer]: ♡
+          - generic [ref=f2e82]: Apakšdaļas
+        - generic [ref=f2e83]:
+          - heading "Džinsa midi svārki" [level=2] [ref=f2e84]
+          - paragraph [ref=f2e85]: Zils · Džinss
+      - button "Kamieļkrāsas mētelis Pievienot izlasei Virsslāņi Kamieļkrāsas mētelis Kamieļkrāsa · Vilna" [ref=f2e86]:
+        - generic [ref=f2e87]:
+          - img "Kamieļkrāsas mētelis" [ref=f2e88]
+          - button "Pievienot izlasei" [ref=f2e89] [cursor=pointer]: ♥
+          - generic [ref=f2e90]: Virsslāņi
+        - generic [ref=f2e91]:
+          - heading "Kamieļkrāsas mētelis" [level=2] [ref=f2e92]
+          - paragraph [ref=f2e93]: Kamieļkrāsa · Vilna
+      - button "Melni ādas mokasīni Pievienot izlasei Apavi Melni ādas mokasīni Melns · Āda" [ref=f2e94]:
+        - generic [ref=f2e95]:
+          - img "Melni ādas mokasīni" [ref=f2e96]
+          - button "Pievienot izlasei" [ref=f2e97] [cursor=pointer]: ♡
+          - generic [ref=f2e98]: Apavi
+        - generic [ref=f2e99]:
+          - heading "Melni ādas mokasīni" [level=2] [ref=f2e100]
+          - paragraph [ref=f2e101]: Melns · Āda
+      - button "Baltas ādas kedas Pievienot izlasei Apavi Baltas ādas kedas Balts · Āda" [ref=f2e102]:
+        - generic [ref=f2e103]:
+          - img "Baltas ādas kedas" [ref=f2e104]
+          - button "Pievienot izlasei" [ref=f2e105] [cursor=pointer]: ♡
+          - generic [ref=f2e106]: Apavi
+        - generic [ref=f2e107]:
+          - heading "Baltas ādas kedas" [level=2] [ref=f2e108]
+          - paragraph [ref=f2e109]: Balts · Āda
+      - button "Brūna ādas soma Pievienot izlasei Somas Brūna ādas soma Brūns · Āda" [ref=f2e110]:
+        - generic [ref=f2e111]:
+          - img "Brūna ādas soma" [ref=f2e112]
+          - button "Pievienot izlasei" [ref=f2e113] [cursor=pointer]: ♥
+          - generic [ref=f2e114]: Somas
+        - generic [ref=f2e115]:
+          - heading "Brūna ādas soma" [level=2] [ref=f2e116]
+          - paragraph [ref=f2e117]: Brūns · Āda

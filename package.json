@@ -1,0 +1,21 @@
+{
+  "name": "fitmap",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "format": "biome format --write ."
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "latest",
+    "@tsconfig/svelte": "latest",
+    "@types/node": "latest",
+    "biome": "latest",
+    "svelte": "latest",
+    "svelte-check": "latest",
+    "typescript": "~6",
+    "vite": "latest"
+  }
+}

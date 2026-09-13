@@ -1,0 +1,5 @@
+{
+  "formatter": { "enabled": true, "indentStyle": "tab" },
+  "organizeImports": { "enabled": true },
+  "linter": { "enabled": true, "rules": { "recommended": true } }
+}
