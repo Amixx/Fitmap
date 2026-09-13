@@ -242,17 +242,15 @@
 <svelte:head><title>FitMap — mana garderobe</title><meta name="description" content="Vizuāla garderobes un tērpu plānošanas lietotne." /></svelte:head>
 
 <div class="app-shell">
-  <aside class="sidebar">
-    <div class="brand"><span class="brand-mark">fm</span><span>fitmap</span></div>
-    <p class="sidebar-intro">Tava garderobe,<br />sakārtota dzīvei.</p>
+  <main class="main-content">
+    <div class="top-navigation">
+      <div class="brand"><span class="brand-mark">fm</span><span>fitmap</span></div>
     <nav aria-label="Galvenā navigācija">
       <button class:active={view === 'wardrobe'} on:click={() => (view = 'wardrobe')}><span>01</span> Garderobe</button>
       <button class:active={view === 'outfits'} on:click={() => (view = 'outfits')}><span>02</span> Mani tērpi</button>
       <button class:active={view === 'builder'} on:click={() => (view = 'builder')}><span>03</span> Izveidot tērpu</button>
     </nav>
-  </aside>
-
-  <main class="main-content">
+    </div>
     <header class="topbar"><div><span class="eyebrow">{view === 'wardrobe' ? 'Tava kolekcija' : view === 'outfits' ? 'Gatavi salikumi' : 'Saderības studija'}</span><h1>{view === 'wardrobe' ? 'Garderobe' : view === 'outfits' ? 'Mani tērpi' : 'Izveido tērpu'}</h1></div><button class="icon-button" aria-label="Meklēt">⌕</button></header>
 
     {#if view === 'wardrobe'}
