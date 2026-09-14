@@ -19,7 +19,7 @@
   type View = 'wardrobe' | 'outfits' | 'builder';
   type Outfit = { id: string; name: string; items: string[]; occasions: string[]; seasons: string[]; rating: number; notes?: string; variants?: string[][]; favorite?: boolean };
   type Compatibility = { items: string[]; score: number; contexts?: string[]; note?: string };
-  const categories = { all: 'Viss', tops: 'Virsdaļas', bottoms: 'Apakšdaļas', outerwear: 'Virsslāņi', shoes: 'Apavi', socks: 'Zeķes', bags: 'Somas' };
+  const categories = { all: 'Viss', tops: 'Virsdaļas', bottoms: 'Apakšdaļas', outerwear: 'Virsslāņi', shoes: 'Apavi', socks: 'Zeķes', gloves: 'Cimdi', scarves: 'Šalles', hats: 'Cepures', bags: 'Somas' };
   const defaultItems = wardrobe.items as Item[];
 
   function loadItems() {
@@ -94,27 +94,38 @@
     return matchesCategory && matchesSearch && matchesSeason && matchesOccasion && matchesWarmth && (!favoritesOnly || favorites.has(item.id));
   });
   $: selectedMatches = selectedMatchesFor(selected?.id);
-  $: builderMatches = items.filter((item) => !builderItems.includes(item.id)).map((item) => ({ item, score: builderScore(item.id) })).sort((a, b) => b.score - a.score);
-  $: builderScoreLabel = builderItems.length < 2 ? 'Izvēlies vēl vienu apģērba gabalu' : `${Math.round(selectedCompatibilityScore() / 3 * 100)}% saderība`;
-  $: suggestedItems = items.filter((item) => !suggestItemIds.includes(item.id)).map((item) => ({ item, score: suggestScore(item.id) })).filter((match) => !suggestItemIds.length || match.score > 0).sort((a, b) => b.score - a.score);
+  $: builderMatches = items.filter((item) => !builderItems.includes(item.id) && !builderItems.some((id) => items.find((candidate) => candidate.id === id)?.category === item.category)).map((item) => ({ item, ...matchDetails(item.id, builderItems) })).sort(compareMatches);
+  $: builderScoreLabel = builderItems.length < 2 ? 'Izvēlies vēl vienu apģērba gabalu' : selectedCompatibilityLabel();
+  $: suggestedItems = items.filter((item) => !suggestItemIds.includes(item.id)).map((item) => ({ item, ...matchDetails(item.id, suggestItemIds) })).sort(compareMatches);
   $: matrixItems = items;
 
-  function builderScore(id: string) {
-    if (!builderItems.length) return 0;
-    const scores = builderItems.map((selectedId) => compatibility.find((pair) => pair.items.includes(selectedId) && pair.items.includes(id))?.score ?? 0);
-    return Math.min(...scores);
-  }
   function builderPairScore(first: string, second: string) { return compatibility.find((pair) => pair.items.includes(first) && pair.items.includes(second))?.score ?? 0; }
-  function suggestScore(id: string) {
-    if (!suggestItemIds.length) return 0;
-    return Math.min(...suggestItemIds.map((selectedId) => builderPairScore(selectedId, id)));
+  function matchDetails(id: string, selectedIds: string[]) {
+    const scores = selectedIds.map((selectedId) => getCompatibility(selectedId, id)?.score).filter((score): score is number => score !== undefined);
+    const hasBadMatch = scores.includes(0);
+    const complete = selectedIds.length > 0 && scores.length === selectedIds.length;
+    const score = scores.length ? scores.reduce((sum, value) => sum + value, 0) / scores.length : 0;
+    const status = hasBadMatch ? 'bad' : complete ? 'confirmed' : scores.length ? 'partial' : 'unknown';
+    return { score, knownCount: scores.length, status };
   }
-  function selectedCompatibilityScore() {
+  function compareMatches(first: { score: number; knownCount: number; status: string }, second: { score: number; knownCount: number; status: string }) {
+    const rank = { confirmed: 3, partial: 2, unknown: 1, bad: 0 };
+    return rank[second.status as keyof typeof rank] - rank[first.status as keyof typeof rank] || second.score - first.score || second.knownCount - first.knownCount;
+  }
+  function selectedCompatibilityLabel() {
     const scores: number[] = [];
     for (let first = 0; first < builderItems.length; first += 1) {
-      for (let second = first + 1; second < builderItems.length; second += 1) scores.push(builderPairScore(builderItems[first], builderItems[second]));
+      for (let second = first + 1; second < builderItems.length; second += 1) {
+        const score = getCompatibility(builderItems[first], builderItems[second])?.score;
+        if (score !== undefined) scores.push(score);
+      }
     }
-    return scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+    if (scores.includes(0)) return '0% saderība';
+    if (!scores.length) return 'Nav novērtēts';
+    const average = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+    const expectedPairs = builderItems.length * (builderItems.length - 1) / 2;
+    const prefix = scores.length < expectedPairs ? 'Daļēji novērtēts · ' : '';
+    return `${prefix}${Math.round(average / 3 * 100)}% saderība`;
   }
   function selectedMatchesFor(id: string | undefined) {
     if (!id) return [];
@@ -276,7 +287,7 @@
       <div class="category-tabs">{#each Object.entries(categories) as [key, label]}<button class:active={category === key} on:click={() => (category = key)}>{label}</button>{/each}</div>
       <div class="view-tools"><div class="view-tabs"><button class:active={wardrobeMode === 'grid'} on:click={() => (wardrobeMode = 'grid')}>Režģis</button><button class:active={wardrobeMode === 'suggest'} on:click={() => openSuggest()}>Ko vilkt?</button><button class:active={wardrobeMode === 'matrix'} on:click={() => (wardrobeMode = 'matrix')}>Matrica</button></div><button class="filter-button" class:active={showFilters} on:click={() => (showFilters = !showFilters)}>Filtri</button></div>
       {#if showFilters}<div class="filter-panel"><label>Sezona<select bind:value={seasonFilter}><option value="all">Visas sezonas</option>{#each ['Pavasaris', 'Vasara', 'Rudens', 'Ziema', 'Visu gadu'] as season}<option value={season}>{season}</option>{/each}</select></label><label>Gadījums<select bind:value={occasionFilter}><option value="all">Visi gadījumi</option>{#each ['Ikdiena', 'Darbs', 'Vakariņas', 'Ceļojums', 'Svinīgs'] as occasion}<option value={occasion}>{occasion}</option>{/each}</select></label><label>Siltums<select bind:value={warmthFilter}><option value="all">Jebkurš</option><option value="warm">Silts</option><option value="light">Viegls</option></select></label><button class="text-button" on:click={clearFilters}>Notīrīt filtrus</button></div>{/if}
-      {#if wardrobeMode === 'suggest'}<section class="suggest-panel"><div class="suggest-copy"><span class="eyebrow">Ātra izvēle</span><h2>Ko vilkt kopā?</h2><p>Izvēlies vienu vai divus gabalus, un parādīšu garderobē saglabātās saderīgās izvēles.</p></div><div class="suggest-picks">{#each items as item}<button class:chosen={suggestItemIds.includes(item.id)} on:click={() => toggleSuggestItem(item)}><img src={item.image} alt="" /><span>{item.name}</span></button>{/each}</div><div class="suggest-results">{#if suggestItemIds.length === 0}<p class="builder-empty">Izvēlies apģērbu augstāk, lai redzētu ieteikumus.</p>{:else}{#each suggestedItems as match}<button on:click={() => selectItem(match.item.id)}><img src={match.item.image} alt="" /><span>{match.item.name}<small>{match.score === 3 ? 'Lieliski sader' : 'Var pamēģināt'}</small></span></button>{/each}{/if}</div></section>{:else if wardrobeMode === 'matrix'}<section class="matrix-wrap"><h2>Visu apģērbu saderība</h2><p class="matrix-help">Zvaigznes rāda ievadītu saderību. `?` nozīmē, ka šis salikums vēl nav novērtēts.</p><div class="matrix" style={`--columns: ${matrixItems.length}`}><div></div>{#each matrixItems as column}<div class="matrix-label">{column.name}</div>{/each}{#each matrixItems as row}<div class="matrix-label">{row.name}</div>{#each matrixItems as column}<button class:great={builderPairScore(row.id, column.id) === 3} class:okay={builderPairScore(row.id, column.id) === 2} class:unknown={!getCompatibility(row.id, column.id) && row.id !== column.id} disabled={row.id === column.id} aria-label={`${row.name} ar ${column.name}`} on:click={() => { if (row.id !== column.id) { suggestItemIds = [row.id, column.id]; wardrobeMode = 'suggest'; } }}>{row.id === column.id ? '' : getCompatibility(row.id, column.id) ? '★'.repeat(builderPairScore(row.id, column.id)) || '×' : '?'}</button>{/each}{/each}</div></section>{:else}<section class="item-grid" aria-label="Garderobes apģērbi">{#each visibleItems as item}<article class="item-card" on:click={() => selectItem(item.id)} on:keydown={(event) => event.key === 'Enter' && selectItem(item.id)} role="button" tabindex="0"><div class="item-image"><img src={item.image} alt={item.name} /><button class="favorite" class:chosen={favorites.has(item.id)} aria-label="Pievienot izlasei" on:click|stopPropagation={() => toggleFavorite(item)}>{favorites.has(item.id) ? '♥' : '♡'}</button><button class="item-edit" on:click|stopPropagation={() => openEditor(item)}>Rediģēt</button><span class="category-label">{categories[item.category as keyof typeof categories]}</span></div><div class="item-info"><h2>{item.name}</h2><p>{item.colors.join(' · ')} <span>·</span> {item.material}</p></div></article>{/each}</section>{/if}
+      {#if wardrobeMode === 'suggest'}<section class="suggest-panel"><div class="suggest-copy"><span class="eyebrow">Ātra izvēle</span><h2>Ko vilkt kopā?</h2><p>Izvēlies vienu vai divus gabalus, un parādīšu garderobē saglabātās saderīgās izvēles.</p></div><div class="suggest-picks">{#each items as item}<button class:chosen={suggestItemIds.includes(item.id)} on:click={() => toggleSuggestItem(item)}><img src={item.image} alt="" /><span>{item.name}</span></button>{/each}</div><div class="suggest-results">{#if suggestItemIds.length === 0}<p class="builder-empty">Izvēlies apģērbu augstāk, lai redzētu ieteikumus.</p>{:else}{#each suggestedItems as match}<button class:unknown={match.status === 'unknown'} class:bad={match.status === 'bad'} on:click={() => selectItem(match.item.id)}><img src={match.item.image} alt="" /><span>{match.item.name}<small>{match.status === 'confirmed' ? 'Lieliski sader' : match.status === 'partial' ? 'Daļēji novērtēts' : match.status === 'bad' ? 'Neiesaku' : 'Nav novērtēts'}</small></span></button>{/each}{/if}</div></section>{:else if wardrobeMode === 'matrix'}<section class="matrix-wrap"><h2>Visu apģērbu saderība</h2><p class="matrix-help">Zvaigznes rāda ievadītu saderību. `?` nozīmē, ka šis salikums vēl nav novērtēts.</p><div class="matrix" style={`--columns: ${matrixItems.length}`}><div></div>{#each matrixItems as column}<div class="matrix-label">{column.name}</div>{/each}{#each matrixItems as row}<div class="matrix-label">{row.name}</div>{#each matrixItems as column}<button class:great={builderPairScore(row.id, column.id) === 3} class:okay={builderPairScore(row.id, column.id) === 2} class:unknown={!getCompatibility(row.id, column.id) && row.id !== column.id} disabled={row.id === column.id} aria-label={`${row.name} ar ${column.name}`} on:click={() => { if (row.id !== column.id) { suggestItemIds = [row.id, column.id]; wardrobeMode = 'suggest'; } }}>{row.id === column.id ? '' : getCompatibility(row.id, column.id) ? '★'.repeat(builderPairScore(row.id, column.id)) || '×' : '?'}</button>{/each}{/each}</div></section>{:else}<section class="item-grid" aria-label="Garderobes apģērbi">{#each visibleItems as item}<article class="item-card" on:click={() => selectItem(item.id)} on:keydown={(event) => event.key === 'Enter' && selectItem(item.id)} role="button" tabindex="0"><div class="item-image"><img src={item.image} alt={item.name} /><button class="favorite" class:chosen={favorites.has(item.id)} aria-label="Pievienot izlasei" on:click|stopPropagation={() => toggleFavorite(item)}>{favorites.has(item.id) ? '♥' : '♡'}</button><button class="item-edit" on:click|stopPropagation={() => openEditor(item)}>Rediģēt</button><span class="category-label">{categories[item.category as keyof typeof categories]}</span></div><div class="item-info"><h2>{item.name}</h2><p>{item.colors.join(' · ')} <span>·</span> {item.material}</p></div></article>{/each}</section>{/if}
       {#if visibleItems.length === 0}<div class="empty"><strong>Šeit nekā nav.</strong><span>Izmēģini citu meklējumu vai noņem filtru.</span></div>{/if}
     {:else if view === 'outfits'}
       <section class="intro-row"><p class="lead">Tērpi, kas jau ir<br /><em>pierādījuši sevi.</em></p><div class="stat"><strong>{outfits.length}</strong><span>gatavi tērpi</span></div><button class="primary-button compact-button" on:click={() => openOutfitEditor()}>+ Jauns tērps</button></section>
@@ -284,7 +295,7 @@
     {:else}
       <section class="builder-head"><div><p class="lead">Sāc ar vienu lietu.<br /><em>Es piemeklēšu pārējo.</em></p><div class="score"><span class="score-dot"></span><strong>{builderScoreLabel}</strong></div></div><button class="secondary-button" on:click={() => (builderItems = [])}>Notīrīt visu</button></section>
       <section class="builder-selected"><h2>Tavs salikums <span>{builderItems.length} izvēlēti</span></h2><div class="selected-row">{#if builderItems.length === 0}<div class="builder-empty">Izvēlies apģērbu zemāk, lai sāktu.</div>{:else}{#each builderItems as itemId}<div class="selected-piece"><img src={items.find((item) => item.id === itemId)?.image} alt="" /><button on:click={() => (builderItems = builderItems.filter((id) => id !== itemId))}>×</button><span>{items.find((item) => item.id === itemId)?.name}</span></div>{/each}{/if}</div></section>
-      <section class="builder-choices"><h2>{builderItems.length ? 'Kas vēl piestāv' : 'Izvēlies pirmo gabalu'}</h2><div class="choice-grid">{#each builderMatches as match}<button class="choice-card" class:weak={builderItems.length > 0 && match.score < 2} on:click={() => addToBuilder(match.item)}><img src={match.item.image} alt="" /><span>{match.item.name}</span>{#if builderItems.length > 0}<small>{match.score === 3 ? 'Lieliski sader' : match.score === 2 ? 'Var pamēģināt' : 'Mazāk ieteicams'}</small>{/if}</button>{/each}</div></section>
+      <section class="builder-choices"><h2>{builderItems.length ? 'Kas vēl piestāv' : 'Izvēlies pirmo gabalu'}</h2><div class="choice-grid">{#each builderMatches as match}<button class="choice-card" class:weak={match.status === 'bad'} class:unknown={match.status === 'unknown'} on:click={() => addToBuilder(match.item)}><img src={match.item.image} alt="" /><span>{match.item.name}</span>{#if builderItems.length > 0}<small>{match.status === 'confirmed' ? `${Math.round(match.score / 3 * 100)}% saderība` : match.status === 'partial' ? `${Math.round(match.score / 3 * 100)}% · Daļēji novērtēts` : match.status === 'bad' ? 'Neiesaku' : 'Nav novērtēts'}</small>{/if}</button>{/each}</div></section>
     {/if}
   </main>
 
