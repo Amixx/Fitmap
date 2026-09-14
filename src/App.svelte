@@ -19,7 +19,7 @@
   type View = 'wardrobe' | 'outfits' | 'builder';
   type Outfit = { id: string; name: string; items: string[]; occasions: string[]; seasons: string[]; rating: number; notes?: string; variants?: string[][]; favorite?: boolean };
   type Compatibility = { items: string[]; score: number; contexts?: string[]; note?: string };
-  const categories = { all: 'Viss', tops: 'Virsdaļas', bottoms: 'Apakšdaļas', outerwear: 'Virsslāņi', shoes: 'Apavi', bags: 'Somas' };
+  const categories = { all: 'Viss', tops: 'Virsdaļas', bottoms: 'Apakšdaļas', outerwear: 'Virsslāņi', shoes: 'Apavi', socks: 'Zeķes', bags: 'Somas' };
   const defaultItems = wardrobe.items as Item[];
 
   function loadItems() {
@@ -152,16 +152,25 @@
   }
   function setCompatibility(first: string, second: string, score: number) {
     const existing = getCompatibility(first, second);
-    if (existing) compatibility = compatibility.map((pair) => pair === existing ? { ...pair, score } : pair);
+    if (existing) {
+      existing.score = score;
+      compatibility = [...compatibility];
+    }
     else compatibility = [...compatibility, { items: [first, second], score }];
+    items = [...items];
   }
   function setCompatibilityNote(first: string, second: string, note: string) {
     const existing = getCompatibility(first, second);
-    if (existing) compatibility = compatibility.map((pair) => pair === existing ? { ...pair, note } : pair);
+    if (existing) {
+      existing.note = note;
+      compatibility = [...compatibility];
+    }
     else compatibility = [...compatibility, { items: [first, second], score: 2, note }];
+    items = [...items];
   }
   function clearCompatibility(first: string, second: string) {
     compatibility = compatibility.filter((pair) => !(pair.items.includes(first) && pair.items.includes(second)));
+    items = [...items];
   }
   function newItem() {
     editingItem = null as unknown as Item;
